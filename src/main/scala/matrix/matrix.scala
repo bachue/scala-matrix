@@ -84,11 +84,14 @@ class ColIterator[T: ClassTag](private val m: Matrix[T], val x: Int) extends sca
     }
 }
 
-class Matrix[T: ClassTag](val x: Int, val y: Int, private val initial: T) {
+class Matrix[T: ClassTag](val x: Int, val y: Int) {
     private val data: Array[T] = new Array[T](x * y)
 
-    for( i <- 0 until x * y) {
-        data(i) = initial
+    def this(x: Int, y: Int, initial: T) = {
+        this(x, y)
+        for( i <- 0 until x * y) {
+            data(i) = initial
+        }
     }
 
     case class CannotAddMatrix(message: String) extends Exception(message)
@@ -173,7 +176,7 @@ class Matrix[T: ClassTag](val x: Int, val y: Int, private val initial: T) {
         if (x != right.y) {
             throw new CannotMultipleMatrix(s"cannot multiple Matrix(${x}, ${y}) and Matrix(${right.x}, ${right.y})")
         }
-        val product = new Matrix(right.x, y, get(1, 1))
+        val product = new Matrix[T](right.x, y)
 
         (1 to y).foreach(i => {
             (1 to right.x).foreach (j => {
