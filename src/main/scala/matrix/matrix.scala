@@ -169,6 +169,22 @@ class Matrix[T: ClassTag](val x: Int, val y: Int, private val initial: T) {
         sum
     }
 
+    def *(right: Matrix[T])(implicit ops: Numeric[T]): Matrix[T] = {
+        if (x != right.y) {
+            throw new CannotMultipleMatrix(s"cannot multiple Matrix(${x}, ${y}) and Matrix(${right.x}, ${right.y})")
+        }
+        val product = new Matrix(right.x, y, get(1, 1))
+
+        (1 to y).foreach(i => {
+            (1 to right.x).foreach (j => {
+                val result = (1 to x).map(k => { ops.times(get(k, i), right.get(j, k)) }).sum
+                product.set(j, i, result)
+            })
+        })
+
+        product
+    }
+
     private def checkXY(_x: Int, _y: Int) = {
         if (_x < 0) {
             throw new OutOfMatrixException(s"x ${_x + 1} < 1, out of matrix error")
