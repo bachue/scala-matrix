@@ -2,6 +2,7 @@ package matrix
 
 import math._
 import scala.reflect.ClassTag
+import scala.collection.Iterable
 
 class Row[T: ClassTag](val y: Int, private val data: Array[T]) {
     private val length: Int = data.length
@@ -97,6 +98,7 @@ class Matrix[T: ClassTag](val x: Int, val y: Int) {
     case class CannotAddMatrix(message: String) extends Exception(message)
     case class CannotMultipleMatrix(message: String) extends Exception(message)
     case class OutOfMatrixException(message: String) extends Exception(message)
+    case class CannotLUDecompositionException(message: String) extends Exception(message)
 
     def get(_x: Int, _y: Int): T = {
         val __x = _x - 1
@@ -145,11 +147,23 @@ class Matrix[T: ClassTag](val x: Int, val y: Int) {
     }
 
     override def clone(): Matrix[T] = {
-        val copy = new Matrix(x, y, get(1, 1))
+        val copy = new Matrix[T](x, y)
 
         (1 to y).foreach(i => {
             (1 to x).foreach(j => {
                 copy.set(j, i, get(j, i))
+            })
+        })
+
+        copy
+    }
+
+    def double_clone(implicit ops: Numeric[T]): Matrix[Double] = {
+        val copy = new Matrix[Double](x, y)
+
+        (1 to y).foreach(i => {
+            (1 to x).foreach(j => {
+                copy.set(j, i, ops.toDouble(get(j, i)))
             })
         })
 
@@ -188,6 +202,39 @@ class Matrix[T: ClassTag](val x: Int, val y: Int) {
         product
     }
 
+    def lu_decomp()(implicit ops: Numeric[T]): (Matrix[Double], Matrix[Double]) = {
+        val s = math.min(x, y)
+        val result = double_clone(ops)
+        val l_matrix = IdentityMatrix[Double](x, y)
+        val u_matrix = ZeroMatrix[Double](x, y)
+
+        (1 to s).foreach(k => {
+            ((k + 1) to y).foreach(i => {
+                if (result.get(k, k) == 0.0) {
+                    throw new CannotLUDecompositionException(s"cannot lu decompose Matrix(${x}, ${y})")
+                }
+                result.set(k, i, result.get(k, i) / result.get(k, k))
+            })
+            ((k + 1) to y).foreach(i => {
+                ((k + 1) to x).foreach(j => {
+                    result.set(j, i, result.get(j, i) - result.get(k, i) * result.get(j, k))
+                })
+            })
+        })
+
+        (1 to x).foreach(i => {
+            (1 to y).foreach(j => {
+                if (i < j) {
+                    l_matrix.set(i, j, result.get(i, j))
+                } else {
+                    u_matrix.set(i, j, result.get(i, j))
+                }
+            })
+        })
+
+        (l_matrix, u_matrix)
+    }
+
     private def checkXY(_x: Int, _y: Int) = {
         if (_x < 0) {
             throw new OutOfMatrixException(s"x ${_x + 1} < 1, out of matrix error")
@@ -201,5 +248,48 @@ class Matrix[T: ClassTag](val x: Int, val y: Int) {
         if (_y >= y) {
             throw new OutOfMatrixException(s"y ${_y + 1} > ${y}, out of matrix error")
         }
+    }
+}
+
+object ZeroMatrix {
+    def apply[T: ClassTag](x: Int, y: Int): Matrix[T] = new Matrix[T](x, y)
+}
+
+object IdentityMatrix {
+    def apply[T: ClassTag](x: Int, y: Int)(implicit ops: Numeric[T]): Matrix[T] = {
+        val matrix = new Matrix[T](x, y)
+        val s = math.min(x, y)
+        for(i <- 1 to s) {
+            matrix.set(i, i, ops.one)
+        }
+        matrix
+    }
+}
+
+object BuildMatrix {
+    def apply[T: ClassTag](rows: Iterable[T] *): Matrix[T] = {
+        val y = rows.size
+        if (y <= 0) {
+            throw new IllegalArgumentException("Invalid Y")
+        }
+        val x = rows.head.size
+        if (x <= 0) {
+            throw new IllegalArgumentException("Invalid X")
+        }
+
+        val matrix = new Matrix[T](x, y)
+        var _y = 0
+        for(row <- rows) {
+            _y += 1
+            var _x = 0
+            if (row.size != x) {
+                throw new IllegalArgumentException(s"Invalid row size, expected ${x}, but ${row.size}")
+            }
+            for(ele <- row) {
+                _x += 1
+                matrix.set(_x, _y, ele)
+            }
+        }
+        matrix
     }
 }
