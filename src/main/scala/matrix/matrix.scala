@@ -202,7 +202,7 @@ class Matrix[T: ClassTag](val x: Int, val y: Int) {
         product
     }
 
-    def lu_decomp()(implicit ops: Numeric[T]): (Matrix[Double], Matrix[Double]) = {
+    def lu_decomp(implicit ops: Numeric[T]): (Matrix[Double], Matrix[Double]) = {
         val s = math.min(x, y)
         val result = double_clone(ops)
         val l_matrix = IdentityMatrix[Double](x, y)
@@ -233,6 +233,16 @@ class Matrix[T: ClassTag](val x: Int, val y: Int) {
         })
 
         (l_matrix, u_matrix)
+    }
+
+    def det(implicit ops: Numeric[T]): Double = {
+        val (_, u) = lu_decomp(ops)
+        val s = math.min(x, y)
+        try {
+            (1 to s).map(i => u.get(i, i)).reduce((a, b) => a * b)
+        } catch {
+            case _: CannotLUDecompositionException => return 0.0
+        }
     }
 
     private def checkXY(_x: Int, _y: Int) = {
