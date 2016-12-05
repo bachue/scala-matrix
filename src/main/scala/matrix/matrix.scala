@@ -202,6 +202,16 @@ class Matrix[T: ClassTag](val x: Int, val y: Int) {
         product
     }
 
+    def transpose: Matrix[T] = {
+        val result = new Matrix[T](y, x)
+        for( _x <- 1 to x) {
+            for( _y <- 1 to y) {
+                result.set(_y, _x, get(_x, _y))
+            }
+        }
+        result
+    }
+
     def lu_decomp(implicit ops: Numeric[T]): (Matrix[Double], Matrix[Double]) = {
         val s = math.min(x, y)
         val result = double_clone(ops)
